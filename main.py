@@ -96,11 +96,11 @@ def get_eligible_badges(
         logger.error(f'[Scroll Canvas] Failed to get the badge list: {badgelist_response.status_code} - {badgelist_response.text}')
         return
 
-    badgelist: list[dict] = badgelist_response.json()['badges']
+    badgelist: list[dict] = badgelist_response.json()['data']
 
-    badgelist = list(filter(lambda badge: 'baseUrl' in badge, badgelist))
+    badgelist = list(filter(lambda badge: 'baseURL' in badge, badgelist))
 
-    badgelist: list[Badge] = [Badge(**badge) for badge in badgelist]
+    badgelist: list[Badge] = [Badge(**badge) for badge in badgelist]  
 
     badgelist: list[Badge] = CUSTOM_BADGES + badgelist
 
@@ -361,37 +361,28 @@ def register_and_claim(
         logger.info(f'[Scroll Canvas] Claiming {len(eligible_badges)} badges')
 
         for badge in eligible_badges:
-            gas_price = utils.suggest_gas_fees(
-                network_name=network_name,
-                proxy=proxy
-            )
-
-            if not gas_price:
-                return enums.TransactionStatus.FAILED
-
+            gas_pr = web3.eth.gas_price
             txn = {
                 'chainId': network.chain_id,
                 'nonce': web3.eth.get_transaction_count(account.address),
                 'from': account.address,
                 'to': badge.mint_info.address,
                 'data': badge.mint_info.data,
-                'value': 0,
-                'gas': 0,
-                **gas_price
+                'maxFeePerGas': int(gas_pr * 1.1),
+                'maxPriorityFeePerGas': int(gas_pr * 0.001),
+                'gas': random.randint(800000, 900000)
             }
 
+            signed_txn = account.sign_transaction(txn)
+            
             try:
-                txn['gas'] = utils.estimate_gas(web3, txn)
+                txn_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
             except Exception as e:
                 if 'insufficient funds' in str(e):
                     logger.critical(f'[Scroll Canvas] Insufficient balance to claim {badge.name} badge')
                     return enums.TransactionStatus.INSUFFICIENT_BALANCE
                 logger.error(f'[Scroll Canvas] Error while estimating gas: {e}')
                 return enums.TransactionStatus.FAILED
-
-            signed_txn = account.sign_transaction(txn)
-
-            txn_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
             logger.info(f'[Scroll Canvas] Transaction: {network.txn_explorer_url}{txn_hash.hex()}')
 
