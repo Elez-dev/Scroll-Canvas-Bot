@@ -86,7 +86,7 @@ def get_eligible_badges(
     }
 
     badgelist_response = requests.get(
-        'https://raw.githubusercontent.com/scroll-tech/canvas-badges/main/scroll.badgelist.json',
+        'https://badge-registry.canvas.scroll.cat/badges?page_number=1&sort=minted&category=all&page_size=200',
         headers=headers,
         timeout=5,
         proxies=proxy
