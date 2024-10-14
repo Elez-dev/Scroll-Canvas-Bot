@@ -49,7 +49,7 @@ class MintInfo(BaseModel):
 
 class Badge(BaseModel):
     name: str
-    base_url: str = Field(alias='baseUrl')
+    base_url: str = Field(alias='baseURL')
     contract_address: str = Field(alias='badgeContract')
     description: str
     mint_info: MintInfo = None
